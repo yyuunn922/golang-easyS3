@@ -92,10 +92,14 @@ func (e easyS3) Save(file interface{}, location string, fileName string) (Upload
 		fmt.Print(reflect.TypeOf(file))
 	}
 
-	uploadFileInfo.FileExtension = WordTirm(left, uploadFileInfo.FileExtension, ".")
-	tempFileName := strings.Split(uploadFileInfo.FileName, "/")
-	tempFileName = strings.Split(tempFileName[len(tempFileName)-1], ".")
-	uploadFileInfo.FileName = tempFileName[0]
+	if fileName == "" {
+		uploadFileInfo.FileExtension = WordTirm(left, uploadFileInfo.FileExtension, ".")
+		tempFileName := strings.Split(uploadFileInfo.FileName, "/")
+		tempFileName = strings.Split(tempFileName[len(tempFileName)-1], ".")
+		uploadFileInfo.FileName = tempFileName[0]
+	} else {
+		uploadFileInfo.FileName = fileName
+	}
 
 	s3s := s3.New(e.awsSession())
 
