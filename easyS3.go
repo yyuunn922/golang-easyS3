@@ -31,6 +31,7 @@ func New() (easyS3, error) {
 
 // aws s3 url로 변경
 func (e easyS3) S3Url(location string) string {
+
 	location = strings.TrimLeft(location, "/")
 	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", e.BucketName, e.Region, location)
 }
