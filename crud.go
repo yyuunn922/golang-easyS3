@@ -3,6 +3,7 @@ package easys3
 import (
 	"errors"
 	"fmt"
+	"io"
 	"mime/multipart"
 	"os"
 	"path/filepath"
@@ -73,8 +74,7 @@ func ChangeMultipertToOs(file *multipart.FileHeader) *os.File {
 // 파일을 저장합니다
 func (e easyS3) Save(file interface{}, location string, fileName string) (UploadFileInfo, error) {
 	var uploadFileInfo UploadFileInfo
-	var saveFile *os.File
-	defer saveFile.Close()
+	var saveFile io.ReadSeeker
 
 	switch reflect.TypeOf(file).String() {
 	case "*os.File":
@@ -93,7 +93,7 @@ func (e easyS3) Save(file interface{}, location string, fileName string) (Upload
 		if err != nil {
 			return uploadFileInfo, err
 		}
-		saveFile = tempFile.(*os.File)
+		saveFile = tempFile
 	default:
 		return uploadFileInfo, errors.New("지원하는 확장자가 아닙니다")
 	}
