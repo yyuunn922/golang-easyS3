@@ -1,6 +1,7 @@
 package easys3
 
 import (
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"os"
@@ -16,6 +17,11 @@ import (
 )
 
 type Direction string
+
+type CopyState struct {
+	CopyState   *s3.CopyObjectOutput   `json:"copy_state"`
+	DeleteState *s3.DeleteObjectOutput `json:"delete_state"`
+}
 
 type UploadFileInfo struct {
 	FileName      string `json:"file_name"`
@@ -89,7 +95,7 @@ func (e easyS3) Save(file interface{}, location string, fileName string) (Upload
 		}
 		saveFile = tempFile.(*os.File)
 	default:
-		fmt.Print(reflect.TypeOf(file))
+		return uploadFileInfo, errors.New("지원하는 확장자가 아닙니다")
 	}
 
 	if fileName == "" {
@@ -116,5 +122,77 @@ func (e easyS3) Save(file interface{}, location string, fileName string) (Upload
 
 	uploadFileInfo.FileUrl = fileLocation
 	return uploadFileInfo, nil
+
+}
+
+// 파일을 카피합니다
+func (e easyS3) Copy(fileLocation, copyLocation string) (*s3.CopyObjectOutput, error) {
+	copyItem := fmt.Sprintf("%v%v", e.BucketName, fileLocation)
+
+	s3s := s3.New(e.awsSession())
+
+	output, err := s3s.CopyObject(&s3.CopyObjectInput{CopySource: aws.String(copyItem), Key: aws.String(copyLocation), Bucket: aws.String(e.BucketName)})
+	if err != nil {
+		return output, errors.New(err.Error())
+	}
+	return output, nil
+
+}
+
+// 파일을 삭제합니다
+func (e easyS3) Delete(fileLocation string) (*s3.DeleteObjectOutput, error) {
+	s3s := s3.New(e.awsSession())
+
+	output, err := s3s.DeleteObject(&s3.DeleteObjectInput{Bucket: &e.BucketName, Key: &fileLocation})
+	if err != nil {
+		return output, errors.New(err.Error())
+	}
+	return output, nil
+}
+
+// 파일을 이동합니다
+// 카피하고 원본을 삭제
+func (e easyS3) Move(fileLocation, moveLocation string) (CopyState, error) {
+
+	var output CopyState
+	copyOutput, err := e.Copy(fileLocation, moveLocation)
+	if err != nil {
+		return output, errors.New(err.Error())
+	}
+	output.CopyState = copyOutput
+
+	fmt.Println(fileLocation)
+	fmt.Println(moveLocation)
+
+	deleteOutput, err := e.Delete(fileLocation)
+	if err != nil {
+		return output, errors.New(err.Error())
+	}
+	fmt.Println(deleteOutput)
+	output.DeleteState = deleteOutput
+
+	return output, nil
+
+}
+
+// 파일을 로드합니다
+// 디렉토리의 파일과 디렉토리를 가져옵니다
+func (e easyS3) Load(location string) ([]*s3.Object, error) {
+	location = WordTirm(left, location, "/")
+	if location[len(location)-1:] != "/" {
+		return nil, errors.New("디렉토리 조회만 가능합니다")
+	}
+
+	s3s := s3.New(e.awsSession())
+
+	output, err := s3s.ListObjects(&s3.ListObjectsInput{
+		Bucket: &e.BucketName,
+		Prefix: aws.String(location),
+	})
+	if err != nil {
+		return output.Contents, errors.New(err.Error())
+	}
+
+	return output.Contents, nil
 
 }

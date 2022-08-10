@@ -1,53 +1,40 @@
 package test
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
+
+	"github.com/joho/godotenv"
+	easys3 "github.com/madoleeee/golang-easyS3"
 )
 
 func TestSave(t *testing.T) {
+	// load env
+	godotenv.Load(".env")
 
-	// err := godotenv.Load(".env")
+	s3, err := easys3.New()
+	if err != nil {
+		t.Log("error")
+		t.Fail()
+	}
 
-	// temp, err := easys3.New()
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
+	temp, err := ioutil.ReadDir("../tempFile")
+	if err != nil {
+		t.Log(err.Error())
+		t.Fail()
+	}
 
-	// files, err := ioutil.ReadDir("../tempFile")
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
+	var output []easys3.UploadFileInfo
+	for _, value := range temp {
+		file, err := os.Open("../tempFile/" + value.Name())
+		if err != nil {
+			t.Log(err.Error())
+			t.Fail()
+		}
 
-	// //
-
-	// // var output []string
-
-	// // for _, file := range files {
-
-	// // 	result, err := temp.Save(file, "/temp", "")
-	// // 	if err != nil {
-	// // 		panic(err.Error())
-	// // 	}
-	// // 	output = append(output, result)
-	// // }
-
-	// // t.Log(output)
-
-	// var output []string
-	// for _, file := range files {
-	// 	aa, err := os.Open("../tempFile/" + file.Name())
-
-	// 	if err != nil {
-	// 		panic(err.Error())
-	// 	}
-	// 	defer aa.Close()
-
-	// 	result, err := temp.Save(aa, "/temp", "")
-	// 	if err != nil {
-	// 		panic(err.Error())
-	// 	}
-	// 	output = append(output, result)
-	// }
-
-	// t.Log(output)
+		temp, err := s3.Save(file, "/tempTest", "")
+		output = append(output, temp)
+	}
+	t.Log(output)
 }
